@@ -1,0 +1,28 @@
+{
+    "name": "trgino/parampos-php",
+    "type": "php",
+    "license": "MIT",
+    "description": "param php",
+    "keywords": [
+        "param",
+        "parampos",
+        "param-pos",
+        "turkpos",
+        "turk-pos"
+    ],
+    "authors": [
+        {
+            "name": "Cüneyt Çil",
+            "email": "trgino@trgino.com",
+            "homepage": "https://github.com/trgino"
+        }
+    ],
+    "require": {
+        "php": ">=7.1"
+    },
+    "autoload": {
+        "psr-4": {
+            "Trgino\\": "src/"
+        }
+    }
+}
