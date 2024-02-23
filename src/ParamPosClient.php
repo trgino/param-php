@@ -404,19 +404,19 @@ class ParamPosClient
         $results = ['status' => false, 'msg' => 'İşlem geçersiz.', 'errorCode' => 0, 'data' => []];
         $post = $post ? $post : $_POST;
         if(isset($post['TURKPOS_RETVAL_Sonuc'])){
-            $results['data']['TURKPOS_RETVAL_Islem_Tarih'] = $post['TURKPOS_RETVAL_Islem_Tarih'];
-            $results['data']['TURKPOS_RETVAL_Islem_Tarih_Unix'] = strtotime($post['TURKPOS_RETVAL_Islem_Tarih']);
-            $results['data']['TURKPOS_RETVAL_Siparis_ID'] = $post['TURKPOS_RETVAL_Siparis_ID'];
-            $results['data']['TURKPOS_RETVAL_KK_No'] = $post['TURKPOS_RETVAL_KK_No'];
-            $results['data']['Banka_Sonuc_Kod'] = $post['Banka_Sonuc_Kod'];
-            $results['data']['TURKPOS_RETVAL_Islem_GUID'] = $post['TURKPOS_RETVAL_Islem_GUID'];
-            $results['data']['TURKPOS_RETVAL_Dekont_ID'] = $post['TURKPOS_RETVAL_Dekont_ID'];
-            $results['data']['TURKPOS_RETVAL_SanalPOS_Islem_ID'] = $post['TURKPOS_RETVAL_SanalPOS_Islem_ID'];
+            foreach($post as $_k => $_v){
+                if(strpos($_k,'TURKPOS_RETVAL') !== false){
+                    $results['data'][$_k] = $_v;
+                }
+            }
+            if(isset($results['data']['TURKPOS_RETVAL_Islem_Tarih'])){
+                $results['data']['TURKPOS_RETVAL_Islem_Tarih_Unix'] = strtotime($results['data']['TURKPOS_RETVAL_Islem_Tarih']);
+            }
 
-            $results['msg'] = $post['TURKPOS_RETVAL_Sonuc_Str'];
+            $results['msg'] = $results['data']['TURKPOS_RETVAL_Sonuc_Str'];
 
-            if(intval($post['TURKPOS_RETVAL_Sonuc']) > 0){
-                $result['status'] = true;
+            if(intval($results['data']['TURKPOS_RETVAL_Sonuc']) > 0){
+                $results['status'] = true;
             }
         }
         return $results;
