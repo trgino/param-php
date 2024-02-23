@@ -404,14 +404,14 @@ class ParamPosClient
         $results = ['status' => false, 'msg' => 'İşlem geçersiz.', 'errorCode' => 0, 'data' => []];
         $post = $post ? $post : $_POST;
         if(isset($post['TURKPOS_RETVAL_Sonuc'])){
-            $results['data']['islemTarihi'] = $post['TURKPOS_RETVAL_Islem_Tarih'];
-            $results['data']['islemTarihiUnix'] = strtotime($post['TURKPOS_RETVAL_Islem_Tarih']);
-            $results['data']['Siparis_ID'] = $post['TURKPOS_RETVAL_Siparis_ID'];
-            $results['data']['KK_No'] = $post['TURKPOS_RETVAL_KK_No'];
-            $results['data']['bankCode'] = $post['Banka_Sonuc_Kod'];
-            $results['data']['Islem_GUID'] = $post['TURKPOS_RETVAL_Islem_GUID'];
-            $results['data']['Dekont_ID'] = $post['TURKPOS_RETVAL_Dekont_ID'];
-            $results['data']['Islem_ID'] = $post['TURKPOS_RETVAL_SanalPOS_Islem_ID'];
+            $results['data']['TURKPOS_RETVAL_Islem_Tarih'] = $post['TURKPOS_RETVAL_Islem_Tarih'];
+            $results['data']['TURKPOS_RETVAL_Islem_Tarih_Unix'] = strtotime($post['TURKPOS_RETVAL_Islem_Tarih']);
+            $results['data']['TURKPOS_RETVAL_Siparis_ID'] = $post['TURKPOS_RETVAL_Siparis_ID'];
+            $results['data']['TURKPOS_RETVAL_KK_No'] = $post['TURKPOS_RETVAL_KK_No'];
+            $results['data']['Banka_Sonuc_Kod'] = $post['Banka_Sonuc_Kod'];
+            $results['data']['TURKPOS_RETVAL_Islem_GUID'] = $post['TURKPOS_RETVAL_Islem_GUID'];
+            $results['data']['TURKPOS_RETVAL_Dekont_ID'] = $post['TURKPOS_RETVAL_Dekont_ID'];
+            $results['data']['TURKPOS_RETVAL_SanalPOS_Islem_ID'] = $post['TURKPOS_RETVAL_SanalPOS_Islem_ID'];
 
             $results['msg'] = $post['TURKPOS_RETVAL_Sonuc_Str'];
 
@@ -427,8 +427,8 @@ class ParamPosClient
         $_check_data = new \stdClass();
         $_check_data->GUID = $this->guid;
         $_check_data->Dekont_ID = $data['Dekont_ID'];
-        $_check_data->Siparis_ID = $data['Dekont_ID'];
-        $_check_data->Islem_ID  = $data['Dekont_ID'];
+        $_check_data->Siparis_ID = $data['Siparis_ID'];
+        $_check_data->Islem_ID  = $data['Islem_ID'];
         $_check_data->G = $this->G;
         $response = $this->client->TP_Islem_Sorgulama4($_check_data);
         if($response && isset($response->TP_Islem_Sorgulama4Result)){
