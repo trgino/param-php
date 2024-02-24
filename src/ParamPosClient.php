@@ -58,7 +58,7 @@ class ParamPosClient
 
         $this->calcinstallment = (isset($data['calcinstallment']) && is_bool($data['calcinstallment']) && $data['calcinstallment']) ? $data['calcinstallment'] : $this->calcinstallment;
 
-        $this->limitinstallment = (isset($data['limitinstallment']) && intval($data['calcinstallment'])>=1 && intval($data['calcinstallment'])<=12) ? intval($data['calcinstallment']) : $this->limitinstallment;
+        $this->limitinstallment = (isset($data['limitinstallment']) && intval($data['limitinstallment'])>=1 && intval($data['limitinstallment'])<=12) ? intval($data['limitinstallment']) : $this->limitinstallment;
 
         $this->debug = (isset($data['debug']) && $data['debug']) ? true : false;
 
@@ -328,7 +328,7 @@ class ParamPosClient
     }
 
     public function table_installments($amount, $bin){
-        $result = ['status' => true, 'data' => []];
+        $result = ['status' => true, 'msg'=> $bin, 'data' => []];
         if($this->advance){
             $total = self::calc_installment($amount, 0);
             $result['data'] = [
@@ -340,7 +340,7 @@ class ParamPosClient
                 ]
             ];
         }
-        $binCheck = $this->check_bin($kk);
+        $binCheck = $this->check_bin($bin);
         $installments = $this->get_installments();
         if($binCheck['status'] && $installments['status']){
             $binEnd = end($binCheck['data']);
@@ -354,13 +354,14 @@ class ParamPosClient
                                 'name' => $_k == 1 ? 'Tek Çekim' : $_k.' Taksit',
                                 'rate' => floatval($_v),
                                 'total' => $total['amount'],
-                                'installment' => self::calc_installment($total['amount']/$_k),
+                                'installment' => self::param_number_format($total['amount']/$_k),
                             ];
                         }
                     }
                 }
             }
         }
+        return $result;
     }
 
     private function prepare_payment($data) {
