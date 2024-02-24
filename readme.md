@@ -3,11 +3,13 @@
     namespace Trgino;
     include('vendor/autoload.php');
     $param = new ParamPosClient([
-    	'clientCode'  =>  10738,
-    	'clientUsername'  =>  'Test',
-    	'clientPassword'  =>  'Test',
-    	'guid'  =>  '0c13d406-873b-403b-9c09-a5766840d98c',
-    	'mode'  =>  'test',
+        'clientCode' => 10738, //default 
+        'clientUsername' => 'Test', //default 
+        'clientPassword' => 'Test', //default 
+        'guid' => '0c13d406-873b-403b-9c09-a5766840d98c', //default 
+        'mode' => 'test', //default 
+        'limitinstallment' => 12, //default 
+        'advance' => true, // default false 
     ]);
 
 
@@ -326,13 +328,13 @@
     	'Basarili_URL'  =>  'http://localhost',
     	'Siparis_ID'  =>  '4444332',
     	'Siparis_Aciklama'  =>  'aciklamalarr',
-    	'Taksit'  =>  '1',
+    	'Taksit'  =>  1,
     	'Islem_Tutar'  =>  '100',
     	'Toplam_Tutar'  =>  '100',
     	'Islem_ID'  =>  '12345',
     	'Data1'  =>  'data1test',
     	'Data2'  =>  'data2test',
-    	'Doviz_Kodu'  =>  1000,
+    	'Doviz_Kodu'  =>  1000, //default
     ]);
 
 #### pay results

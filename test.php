@@ -4,11 +4,13 @@ namespace Trgino;
 include('vendor/autoload.php');
 
 $param = new ParamPosClient([
-    'clientCode' => 10738,
-    'clientUsername' => 'Test',
-    'clientPassword' => 'Test',
-    'guid' => '0c13d406-873b-403b-9c09-a5766840d98c',
-    'mode' => 'test',
+    'clientCode' => 10738, //default 
+    'clientUsername' => 'Test', //default 
+    'clientPassword' => 'Test', //default 
+    'guid' => '0c13d406-873b-403b-9c09-a5766840d98c', //default 
+    'mode' => 'test', //default 
+    'limitinstallment' => 12, //default 
+    'advance' => true, // default false 
 ]);
 ob_start();
 echo '###########'.PHP_EOL.'check_bin:'.print_r($param->check_bin('6060432073705005'), true).PHP_EOL.'###########'.PHP_EOL;
@@ -26,13 +28,13 @@ echo '###########'.PHP_EOL.'pay:'.print_r($param->pay([
     'Basarili_URL' => 'http://localhost',
     'Siparis_ID' => '4444332',
     'Siparis_Aciklama' => 'aciklamalarr',
-    'Taksit' => '1',
+    'Taksit' => 1, //default
     'Islem_Tutar' => '100',
     'Toplam_Tutar' => '100',
     'Islem_ID' => '12345',
     'Data1' => 'data1test',
     'Data2' => 'data2test',
-    'Doviz_Kodu' => 1000,
+    'Doviz_Kodu' => 1000, //default 
 ]), true).PHP_EOL.'###########'.PHP_EOL;
 
 echo '###########'.PHP_EOL.'check3d:'.print_r($param->check3d($_POST), true).PHP_EOL.'###########'.PHP_EOL;

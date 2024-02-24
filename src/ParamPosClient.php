@@ -17,6 +17,9 @@ class ParamPosClient
     private $data;
     private $temp;
     private $debug = false;
+    private $advance = false;
+    private $calcinstallment = true;
+    private $limitinstallment = 12;
     private $userType; // user, merchant
 
     private $url = [
@@ -50,6 +53,12 @@ class ParamPosClient
         $this->serviceUrl = (isset($data['mode']) && $data['mode'] == 'test') ? $this->url['test'] : $this->url['live'];
 
         $this->userType = isset($data['userType']) ? $data['userType'] : 'user';
+
+        $this->advance = (isset($data['advance']) && is_bool($data['advance']) && $data['advance']) ? $data['advance'] : $this->advance;
+
+        $this->calcinstallment = (isset($data['calcinstallment']) && is_bool($data['calcinstallment']) && $data['calcinstallment']) ? $data['calcinstallment'] : $this->calcinstallment;
+
+        $this->limitinstallment = (isset($data['limitinstallment']) && intval($data['calcinstallment'])>=1 && intval($data['calcinstallment'])<=12) ? intval($data['calcinstallment']) : $this->limitinstallment;
 
         $this->debug = (isset($data['debug']) && $data['debug']) ? true : false;
 
@@ -102,8 +111,8 @@ class ParamPosClient
 
     private function get_currency_code($data){
         if(isset($data['Doviz_Kodu'])){
-            if(in_array($data['Doviz_Kodu'], [1000, 1001, 1002, 1003])){
-                return $data['Doviz_Kodu'];
+            if(intval($data['Doviz_Kodu'])>=1000 && in_array( intval($data['Doviz_Kodu']) , [1000, 1001, 1002, 1003])){
+                return intval($data['Doviz_Kodu']);
             }elseif(in_array($data['Doviz_Kodu'], ['TRL', 'TRY', 'EUR', 'USD', 'GBP'])){
                 return self::currency_code($data['Doviz_Kodu']);
             }
@@ -141,8 +150,11 @@ class ParamPosClient
         $_bin = new \stdClass();
         $_bin->BIN = $bin;
         $_bin->G = $this->G;
-
-        return $this->client->BIN_SanalPos($_bin);
+        $_bin_request = $this->client->BIN_SanalPos($_bin);
+        if($this->debug){
+            $results['debug'] = $_bin_request;
+        }
+        return $_bin_request;
     }
 
     public function check_bin($bin) {
@@ -207,7 +219,11 @@ class ParamPosClient
         $sha2B64 = new \stdClass();
         $sha2B64->Data = implode('', $security);
         $sha2B64->G = $this->G;
-        return $this->client->SHA2B64($sha2B64)->SHA2B64Result;
+        $sha264_request = $this->client->SHA2B64($sha2B64);
+        if($this->debug){
+            $results['debug'] = $sha264_request;
+        }
+        return $sha264_request->SHA2B64Result;
     }
 
     private function organize_installments($data){
@@ -215,7 +231,9 @@ class ParamPosClient
         foreach($data as $_k => $_v){
             if(strpos($_k, 'MO_') !== false && floatval($_v) >= 0){
                 $_no = intval(substr($_k, 3));
-                $_temp[$_no] = floatval($_v);
+                if($_no <= $this->limitinstallment){
+                    $_temp[$_no] = floatval($_v);
+                }
             }
         }
         return $_temp;
@@ -229,12 +247,18 @@ class ParamPosClient
         $installments->GUID = $this->guid;
         if($type == 'user'){
             $_liste = $this->client->TP_Ozel_Oran_SK_Liste($installments);
+            if($this->debug){
+                $results['debug'] = $_liste;
+            }
             if( $_liste && isset($_liste->TP_Ozel_Oran_SK_ListeResult) ){
                 $_soap_results = $_liste->TP_Ozel_Oran_SK_ListeResult;
                 $_path = 'DT_Ozel_Oranlar_SK';
             }
         }elseif($type == 'merchant'){
             $_liste = $this->client->TP_Ozel_Oran_Liste($installments);
+            if($this->debug){
+                $results['debug'] = $_liste;
+            }
             if( $_liste && isset($_liste->TP_Ozel_Oran_ListeResult) ){
                 $_soap_results = $_liste->TP_Ozel_Oran_ListeResult;
                 $_path = 'DT_Ozel_Oranlar';
@@ -291,6 +315,54 @@ class ParamPosClient
         return $results;
     }
 
+    private function calc_installment($amount, $rate){
+        $totalRate = 100 + floatval($rate);
+        $oldAmount = floatval($amount);
+        $newAmount = self::param_number_format($oldAmount / 100 * $totalRate);
+        $fee = self::param_number_format($newAmount - $oldAmount);
+        
+        return [
+            'amount' => $newAmount,
+            'fee' => $fee,
+        ];
+    }
+
+    public function table_installments($amount, $bin){
+        $result = ['status' => true, 'data' => []];
+        if($this->advance){
+            $total = self::calc_installment($amount, 0);
+            $result['data'] = [
+                1 => [
+                    'name' => 'Tek Çekim',
+                    'rate' => 0,
+                    'total' => $total['amount'],
+                    'installment' => $total['amount'],
+                ]
+            ];
+        }
+        $binCheck = $this->check_bin($kk);
+        $installments = $this->get_installments();
+        if($binCheck['status'] && $installments['status']){
+            $binEnd = end($binCheck['data']);
+            if(isset($installments['data'][$binEnd['SanalPOS_ID']])){
+                $rates = $installments['data'][$binEnd['SanalPOS_ID']]['rates'];
+                if($rates){
+                    foreach($rates as $_k => $_v){
+                        if(!($this->advance && $_k == 1)){
+                            $total = self::calc_installment($amount, floatval($_v));
+                            $result['data'][$_k] = [
+                                'name' => $_k == 1 ? 'Tek Çekim' : $_k.' Taksit',
+                                'rate' => floatval($_v),
+                                'total' => $total['amount'],
+                                'installment' => self::calc_installment($total['amount']/$_k),
+                            ];
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private function prepare_payment($data) {
         $this->temp->Doviz_Kodu = self::get_currency_code($data);
 
@@ -311,7 +383,6 @@ class ParamPosClient
         $this->temp->Islem_Tutar = isset($data['Islem_Tutar']) ? self::param_number_format($data['Islem_Tutar'], 2, '.') : '';
         $this->data->Toplam_Tutar = isset($data['Toplam_Tutar']) ? self::param_number_format($data['Toplam_Tutar'], 2, ',') : '';
         $this->temp->Toplam_Tutar = isset($data['Toplam_Tutar']) ? self::param_number_format($data['Toplam_Tutar'], 2, '.') : '';
-        $this->temp->Komisyon_Tutar = 0;
         $this->data->Islem_ID = isset($data['Islem_ID']) ? $data['Islem_ID'] : '';
         $this->data->IPAdr = isset($data['IPAdr']) ? self::limit_string($data['IPAdr'], 50) : self::getClientIp();
         $this->data->Ref_URL = isset($data['Ref_URL']) ? self::limit_string($data['Ref_URL']) : '';
@@ -347,19 +418,25 @@ class ParamPosClient
         $binData = end($checkBin['data']);
         if(isset($getInstallments['data'][$binData['SanalPOS_ID']])){
             $installementsRates = $getInstallments['data'][$binData['SanalPOS_ID']]['rates'];
-            if(!isset($installementsRates[$this->data->Taksit])){
+            if( 
+                !isset($installementsRates[$this->data->Taksit]) || 
+                (isset($installementsRates[$this->data->Taksit]) && floatval($installementsRates[$this->data->Taksit]) < 0) ||
+                (intval($this->data->Taksit) > $this->limitinstallment) 
+            ){
                 $results['msg'] = 'Kartınız '.$this->data->Taksit.' taksit desteklemiyor.';
                 return $results;
             }
             $installmentRate = $installementsRates[$this->data->Taksit];
         }
 
-        if($installmentRate >= 0){
+        if($installmentRate >= 0 && $this->calcinstallment){
+            if($this->advance && intval($this->data->Taksit) == 1){
+                $installmentRate = 0;
+            }
             $totalRate = 100 + floatval($installmentRate);
             $oldToplamTotar = floatval($this->temp->Islem_Tutar);
             $this->temp->Toplam_Tutar = $oldToplamTotar / 100 * $totalRate;
             $this->data->Toplam_Tutar = self::param_number_format($this->temp->Toplam_Tutar, 2, ',');
-            $this->temp->Komisyon_Tutar = floatval($this->temp->Toplam_Tutar) - $oldToplamTotar;
         }
         
         $transaction = self::transaction();
@@ -374,12 +451,18 @@ class ParamPosClient
             $this->data->Islem_Guvenlik_Tip = '3D';
             $this->data->Islem_Hash = self::sha2b64();
             $_response = $this->client->Pos_Odeme($this->data);
+            if($this->debug){
+                $results['debug'] = $_response;
+            }
             $_path = 'Pos_OdemeResult';
         }else{
             $this->data->Islem_Guvenlik_Tip = '3D';
             $this->data->Islem_Hash = self::sha2b64('TTP_Islem_Odeme_WD_3D0001');
             $this->data->Doviz_Kodu = $this->temp->Doviz_Kodu;
             $_response = $this->client->TP_Islem_Odeme_WD($this->data);
+            if($this->debug){
+                $results['debug'] = $_response;
+            }
             $_path = 'TP_Islem_Odeme_WDResult';
         }
         if($_response && isset($_response->{$_path})){
@@ -431,6 +514,9 @@ class ParamPosClient
         $_check_data->Islem_ID  = $data['Islem_ID'];
         $_check_data->G = $this->G;
         $response = $this->client->TP_Islem_Sorgulama4($_check_data);
+        if($this->debug){
+            $results['debug'] = $response;
+        }
         if($response && isset($response->TP_Islem_Sorgulama4Result)){
             $_response = $response->TP_Islem_Sorgulama4Result;
             if($_response->Sonuc > 0){
